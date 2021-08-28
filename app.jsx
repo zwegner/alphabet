@@ -66,7 +66,7 @@ function Base() {
         // Check if it's the key they should've hit
         if (e.keyCode === state.next) {
           let time = new Date();
-          state.times[e.keyCode] = time - state.last;
+          state.times[e.keyCode] = time - state.start;
           state.last = time;
           // Last letter: done!
           if (e.key === state.endLetter) {
