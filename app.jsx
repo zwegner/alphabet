@@ -45,13 +45,17 @@ function lsStore(key, value) {
 
 function Base() {
   let [state, setState] = useState({
-    running: false, start: 0, end: 0, current: 0, next: 65, last: 0, times: {},
-    isRecord: false, record: null, startLetter: 'a', endLetter: 'z'});
+    running: false, start: 0, end: 0, current: 0, next: 65, last: 0,
+    startLetter: 'a', endLetter: 'z',
+    times: {}, recordTimes: {}, isRecord: false, record: null});
   let sref = useRef(state);
   sref.current = state;
 
   state.recordKey = 'best-time-' + state.startLetter + '-' + state.endLetter;
+  // Seems kinda dumb to reload from local storage on every render (i.e. every
+  // frame when the clock is running) but whatever
   state.record = lsLoad(state.recordKey);
+  state.recordTimes = lsLoad(state.recordKey + '-breakdown') || {};
 
   useEffect(() => {
     document.addEventListener('keydown', (e) => {
@@ -72,8 +76,10 @@ function Base() {
           if (e.key === state.endLetter) {
             let total = time - state.start;
             state.isRecord = state.record === null || total < state.record;
+            // New record: FUCKING SWEET DUDE
             if (state.isRecord) {
               lsStore(state.recordKey, total);
+              lsStore(state.recordKey + '-breakdown', state.times);
               state.record = total;
               recordSound.play();
             }
@@ -131,11 +137,17 @@ function Base() {
   const timeStr = (t) => (t === null || t === undefined) ? '---' :
     (t / 1000).toFixed(3) + 's';
 
+  let loadBreakdown = () => {
+    state.times = lsLoad(state.recordKey + '-breakdown') || {};
+    state.recordTimes = state.times;
+    setState({...state});
+  }
+
   return <div className='container'>
     <h3>type the alphabet quick ya dingus</h3>
     <div className='letter'>{ String.fromCharCode(97 + state.next - 65) }</div>
     <div className='time'>{ timeStr(state.current) }</div>
-    <div className='record'>
+    <div className='record' onClick={ loadBreakdown }>
       Record: { timeStr(state.record) }
       { state.isRecord ?
         <div className='new-record'>New Record!</div>
@@ -154,8 +166,19 @@ function Base() {
             if (idx > 25)
               return null;
             let letter = String.fromCharCode(97 + idx);
-            let time = timeStr(state.times[65 + idx])
-            return <td>{`${letter}: ${time}`}</td>;
+            let time = state.times[65 + idx];
+            let rec = state.recordTimes[65 + idx];
+            let offset = null;
+            if (time !== undefined && rec !== undefined) {
+              let delta = time - rec;
+              let cls = delta > 0 ? 'over' : delta < 0 ? 'under' : 'even';
+              let plus = delta > 0 ? '+' : '';
+              offset = <div className={ 'delta ' + cls }>
+                  { plus + timeStr(delta) }
+                </div>;
+            }
+            time = timeStr(time)
+            return <td>{`${letter}: ${time}`} { offset }</td>;
           }) }
         </tr>)}
       </table>
