@@ -88,7 +88,8 @@ function Base() {
       }
       // Enter/space: reset
       else if (state.running && (e.keyCode === 13 || e.keyCode === 32)) {
-        setState({...state, end: new Date(), running: false, next: String.fromCharCode(97 + state.startLetter - 65)});
+        setState({...state, end: new Date(), running: false,
+          next: String.fromCharCode(97 + state.startLetter - 65)});
       }
       requestAnimationFrame(update);
     });
@@ -107,15 +108,25 @@ function Base() {
     requestAnimationFrame(update);
   }, []);
 
-  let dropdown = (name) => <select value={ state[name] }
-      onChange={ (e) => {
-        state[name] = e.target.value;
-        setState({...state, next: String.fromCharCode(97 + state.startLetter - 65)});
-        // Unfocus the dropdown so the first keypress isn't intercepted
-        e.target.blur();
-      } }>
-    { range(26).map((a) => <option>{ String.fromCharCode(97 + a) }</option>) }
-    </select>;
+  let dropdown = (name) => {
+      let s, e;
+      if (name === 'startLetter')
+        [s, e] = [0, 25];
+      else
+        [s, e] = [state.startLetter.charCodeAt(0) - 97 + 1, 26];
+      return <select value={ state[name] }
+        onChange={ (e) => {
+          state[name] = e.target.value;
+          let code = state.startLetter.charCodeAt(0);
+          if (name === 'startLetter' && state.endLetter <= state.startLetter)
+            state.endLetter = 'z';
+          setState({...state, next: 65 + code - 97});
+          // Unfocus the dropdown so the first keypress isn't intercepted
+          e.target.blur();
+        } }>
+      { range(s, e).map((a) => <option>{ String.fromCharCode(97 + a) }</option>) }
+      </select>;
+    };
 
   const timeStr = (t) => (t === null || t === undefined) ? '---' :
     (t / 1000).toFixed(3) + 's';
